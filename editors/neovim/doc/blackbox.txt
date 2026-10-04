@@ -1,0 +1,48 @@
+*blackbox.txt*  AI-driven debugging for Neovim through the Blackbox MCP server
+
+==============================================================================
+CONTENTS                                                    *blackbox*
+
+  Setup ............................................ |blackbox-setup|
+  Commands ......................................... |blackbox-commands|
+  Choosing a window ................................ |blackbox-windows|
+  Launch configurations ............................ |blackbox-launch|
+
+==============================================================================
+SETUP                                                       *blackbox-setup*
+
+Requires Neovim 0.10+ and nvim-dap. Call: >lua
+    require('blackbox').setup()
+<
+This starts a small bridge: a private socket in /tmp/blackbox-<uid>/ and a
+registry entry describing this Neovim. The Blackbox MCP server
+(~/.blackbox/blackbox-mcp.js, installed with the VS Code extension) finds it
+there and forwards AI tool calls to it.
+
+==============================================================================
+COMMANDS                                                    *blackbox-commands*
+
+:BlackboxStatus                                             *:BlackboxStatus*
+    Show the bridge socket, folders, debug sessions and whether the MCP
+    launcher is installed.
+
+:BlackboxCopyMcpConfig                                      *:BlackboxCopyMcpConfig*
+    Copy an MCP server entry for your AI tool's config (absolute node path
+    and the launcher) to the + and " registers.
+
+==============================================================================
+CHOOSING A WINDOW                                           *blackbox-windows*
+
+An AI tool started in |:terminal| uses this Neovim automatically
+($BLACKBOX_WINDOW is set there). Otherwise the MCP server picks the window
+whose working directory contains the tool's folder, or asks the AI to choose
+with ide_list_windows / ide_select_window.
+
+==============================================================================
+LAUNCH CONFIGURATIONS                                       *blackbox-launch*
+
+debug_start {configName} looks in each folder's .vscode/launch.json and in
+|dap.configurations|. Its type needs an adapter in dap.adapters, e.g. for
+PHP install php-debug-adapter with :MasonInstall and set dap.adapters.php.
+
+ vim:tw=78:ts=8:ft=help:norl:

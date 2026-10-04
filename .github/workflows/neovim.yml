@@ -1,0 +1,64 @@
+name: Neovim Plugin
+
+# Lua unit tests (plenary) and the editor-independent conformance suite, which
+# drives a headless Neovim through the real MCP server against a Go fixture
+# debugged by delve.
+
+on:
+  push:
+    branches: [ main, 'feat/**' ]
+    paths: [ 'editors/neovim/**', 'editors/conformance/**', 'editors/vscode/src/**', 'schema/**', '.github/workflows/neovim.yml' ]
+  pull_request:
+    paths: [ 'editors/neovim/**', 'editors/conformance/**', 'editors/vscode/src/**', 'schema/**', '.github/workflows/neovim.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    env:
+      NVIM_DAP_PATH: ${{ github.workspace }}/.deps/nvim-dap
+      PLENARY_PATH: ${{ github.workspace }}/.deps/plenary.nvim
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: v0.10.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Install delve
+        run: go install github.com/go-delve/delve/cmd/dlv@latest && echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch nvim-dap and plenary
+        run: |
+          git clone --depth 1 https://github.com/mfussenegger/nvim-dap "$NVIM_DAP_PATH"
+          git clone --depth 1 https://github.com/nvim-lua/plenary.nvim "$PLENARY_PATH"
+
+      - name: Lua unit tests
+        working-directory: editors/neovim
+        run: nvim --headless --noplugin -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/unit { minimal_init = 'tests/minimal_init.lua', sequential = true }"
+
+      # The conformance suite talks to the window through the real MCP server.
+      - name: Build the MCP server
+        working-directory: editors/vscode
+        run: npm ci && npm run compile
+
+      - name: Conformance (Neovim + delve)
+        working-directory: editors/conformance
+        run: npm ci && npm run test:nvim

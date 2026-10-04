@@ -1,0 +1,27 @@
+{
+    // Used by the Blackbox conformance suite.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Fixture",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}"
+        },
+        {
+            // The adapter refuses it, to check that the error is reported.
+            "name": "Fixture (broken)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/does-not-exist"
+        },
+        {
+            // Its adapter never answers, to check the stalled-start explanation.
+            "name": "Fixture (stalled)",
+            "type": "blackbox-stall",
+            "request": "launch"
+        }
+    ]
+}

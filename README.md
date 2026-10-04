@@ -57,7 +57,7 @@ This project contains implementations for the following editors:
 |-----|--------|-----------|
 | **VS Code** | Active | [`editors/vscode/`](editors/vscode/) |
 | **JetBrains** | Planned | [`editors/jetbrains/`](editors/jetbrains/) |
-| **Neovim** | Planned | [`editors/neovim/`](editors/neovim/) |
+| **Neovim** | Working, not yet published ([install from this repo](editors/neovim/README.md)) | [`editors/neovim/`](editors/neovim/) |
 
 
 ## 📚 Packages in this Monorepo
