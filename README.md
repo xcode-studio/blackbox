@@ -56,7 +56,7 @@ This project contains implementations for the following editors:
 | IDE | Status | Directory |
 |-----|--------|-----------|
 | **VS Code** | Active | [`editors/vscode/`](editors/vscode/) |
-| **JetBrains** | Planned | [`editors/jetbrains/`](editors/jetbrains/) |
+| **JetBrains** (PhpStorm, IntelliJ IDEA, GoLand, …) | Working, not yet published ([build from this repo](editors/jetbrains/README.md)) | [`editors/jetbrains/`](editors/jetbrains/) |
 | **Neovim** | Working, not yet published ([install from this repo](editors/neovim/README.md)) | [`editors/neovim/`](editors/neovim/) |
 
 

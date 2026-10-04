@@ -851,6 +851,7 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./ && node scripts/copy-schema.js",
+        "bundle:mcp": "node scripts/bundle-mcp.js",
         "watch": "tsc -watch -p ./",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js",
@@ -863,6 +864,7 @@
         "@types/node": "^20.0.0",
         "@types/vscode": "^1.99.0",
         "@vscode/test-electron": "^3.1.0",
+        "esbuild": "^0.28.2",
         "eslint": "^9.0.0",
         "mocha": "^10.0.0",
         "typescript": "^5.5.0"

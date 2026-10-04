@@ -1,0 +1,150 @@
+name: JetBrains Plugin
+
+# Checks: Kotlin unit tests, the plugin verifier, and the editor-independent
+# conformance suite against IntelliJ IDEA (Java fixture) through the real MCP
+# server, on every push and pull request that touches the plugin.
+#
+# Release: bump pluginVersion in editors/jetbrains/gradle.properties, add an
+# editors/jetbrains/CHANGELOG.md entry, merge, then push a tag
+# `jetbrains-v<version>`. This checks the tag, version and changelog agree,
+# runs the checks, builds and signs the plugin once, creates the GitHub
+# Release (notes from CHANGELOG.md, plugin zip attached) and publishes that
+# zip to the JetBrains Marketplace ("eap" channel for pre-releases).
+
+on:
+  push:
+    branches: [ main, 'feat/**' ]
+    tags: [ 'jetbrains-v*' ]
+    paths: [ 'editors/jetbrains/**', 'editors/conformance/**', 'editors/vscode/src/**', 'editors/vscode/scripts/**', 'schema/**', '.github/workflows/jetbrains.yml' ]
+  pull_request:
+    paths: [ 'editors/jetbrains/**', 'editors/conformance/**', 'editors/vscode/src/**', 'editors/vscode/scripts/**', 'schema/**', '.github/workflows/jetbrains.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: editors/jetbrains
+    shell: bash
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check version, tag and changelog
+        id: meta
+        run: |
+          version=$(sed -n 's/^pluginVersion=//p' gradle.properties)
+          prerelease=false
+          # Only a release needs its tag and changelog entry; other runs just test.
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            if [[ "$GITHUB_REF_NAME" != "jetbrains-v$version" ]]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match gradle.properties pluginVersion $version (expected jetbrains-v$version)"
+              exit 1
+            fi
+            export CHANGELOG="$PWD/CHANGELOG.md"
+            node ../vscode/scripts/release-notes.js "$version" > /dev/null
+            prerelease=$(node ../vscode/scripts/release-notes.js "$version" --prerelease)
+          fi
+          {
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      # The plugin bundles the MCP server; the conformance suite runs it too.
+      - name: Build the MCP server
+        working-directory: editors/vscode
+        run: (npm ci || (npm cache clean --force && npm ci)) && npm run compile
+
+      - name: Unit tests and build
+        run: ./gradlew --console=plain test buildPlugin
+
+      - name: Plugin verifier
+        if: runner.os == 'Linux'
+        run: ./gradlew --console=plain verifyPlugin
+
+      - name: Conformance (IntelliJ IDEA + Java)
+        if: runner.os == 'Linux'
+        working-directory: editors/conformance
+        run: npm ci && xvfb-run -a npm run test:jetbrains
+
+  release:
+    needs: [ check, test ]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Build the MCP server
+        working-directory: editors/vscode
+        run: npm ci
+
+      - name: Build and sign
+        run: ./gradlew --console=plain signPlugin
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Create GitHub Release
+        run: |
+          CHANGELOG="$PWD/CHANGELOG.md" node ../vscode/scripts/release-notes.js "${{ needs.check.outputs.version }}" > release-notes.md
+          gh release create "$GITHUB_REF_NAME" build/distributions/*-signed.zip \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Blackbox for JetBrains IDEs ${{ needs.check.outputs.version }}" \
+            --notes-file release-notes.md \
+            ${{ needs.check.outputs.prerelease == 'true' && '--prerelease' || '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Publish to JetBrains Marketplace
+        run: ./gradlew --console=plain publishPlugin ${{ needs.check.outputs.prerelease == 'true' && '-PpublishChannel=eap' || '' }}
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}

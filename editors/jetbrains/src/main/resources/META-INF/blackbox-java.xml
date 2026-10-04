@@ -1,0 +1,5 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="dev.blackbox">
+        <languageSupport implementation="dev.blackbox.lang.JavaSupport"/>
+    </extensions>
+</idea-plugin>

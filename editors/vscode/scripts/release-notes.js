@@ -3,6 +3,8 @@
 //   node scripts/release-notes.js 0.5.0               -> the notes (markdown)
 //   node scripts/release-notes.js 0.5.0 --prerelease  -> "true" or "false"
 //
+// CHANGELOG=<file> reads another editor's changelog (default: this one).
+//
 // Exits with an error if the version has no entry or the entry is empty, so
 // nothing is released without release notes. Headings look like:
 //   ## 0.5.0 (Pre-release) — 2026-10-01
@@ -16,7 +18,7 @@ if (!version) {
     process.exit(2);
 }
 
-const changelog = fs.readFileSync(path.resolve(__dirname, '../CHANGELOG.md'), 'utf8');
+const changelog = fs.readFileSync(process.env.CHANGELOG || path.resolve(__dirname, '../CHANGELOG.md'), 'utf8');
 const sections = changelog.split(/^## /m).slice(1);
 const section = sections.find(s => s.split(/[\s(—]/)[0] === version);
 if (!section) {

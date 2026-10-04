@@ -50,6 +50,14 @@ Each VS Code extension version is a tag `vscode-v<version>`, a [GitHub Release](
 
 To try the pipeline on a branch without releasing anything, run the workflow by hand from the Actions tab: it builds, tests and packages only.
 
+### JetBrains plugin
+
+Same flow with tag `jetbrains-v<version>`: bump `pluginVersion` in `editors/jetbrains/gradle.properties`, rename `## Unreleased` in `editors/jetbrains/CHANGELOG.md` (check it with `CHANGELOG=editors/jetbrains/CHANGELOG.md node editors/vscode/scripts/release-notes.js <x.y.z>`), merge, then push the tag. The **JetBrains Plugin** workflow runs the unit tests, the plugin verifier and the conformance suite, signs the plugin, creates the GitHub Release and publishes to the JetBrains Marketplace (pre-releases to the `eap` channel).
+
+It needs these repository secrets: `JETBRAINS_PUBLISH_TOKEN` (a Marketplace token), and `JETBRAINS_CERTIFICATE_CHAIN`, `JETBRAINS_PRIVATE_KEY`, `JETBRAINS_PRIVATE_KEY_PASSWORD` for [plugin signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html). The Marketplace accepts automated uploads only after the first version was uploaded by hand on [plugins.jetbrains.com](https://plugins.jetbrains.com/plugin/add).
+
+The plugin bundles the MCP server from `editors/vscode`, so a server change reaches JetBrains users with the next plugin release.
+
 ## Reporting Issues
 
 - Use the GitHub issue tracker

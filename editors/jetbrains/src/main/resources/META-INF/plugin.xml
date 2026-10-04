@@ -1,0 +1,35 @@
+<idea-plugin>
+    <id>dev.blackbox.jetbrains</id>
+    <name>Blackbox</name>
+    <vendor url="https://github.com/xcode-studio/blackbox">xcode-studio</vendor>
+    <description><![CDATA[
+        <p>Lets AI tools (Claude Code, Cursor, any MCP client) drive the IDE's debugger through the
+        <a href="https://github.com/xcode-studio/blackbox">Blackbox</a> MCP server: set breakpoints, start run
+        configurations by name, wait for pauses, step, inspect and change variables, and read logpoint output.</p>
+        <p>Works in every IntelliJ-based IDE (PhpStorm, IntelliJ IDEA, GoLand, PyCharm, WebStorm, ...), with the same
+        tools as the Blackbox extensions for VS Code and Neovim.</p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.xdebugger</depends>
+    <depends optional="true" config-file="blackbox-java.xml">com.intellij.java</depends>
+    <depends optional="true" config-file="blackbox-php.xml">com.jetbrains.php</depends>
+    <depends optional="true" config-file="blackbox-terminal.xml">org.jetbrains.plugins.terminal</depends>
+
+    <extensionPoints>
+        <extensionPoint qualifiedName="dev.blackbox.languageSupport" interface="dev.blackbox.lang.LanguageSupport" dynamic="true"/>
+    </extensionPoints>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="dev.blackbox.ipc.BridgeStartup"/>
+        <notificationGroup id="Blackbox" displayType="BALLOON"/>
+    </extensions>
+
+    <actions>
+        <action id="Blackbox.CopyMcpConfig" class="dev.blackbox.launcher.CopyMcpConfigAction"
+                text="Blackbox: Copy MCP Config"
+                description="Copy the Blackbox MCP server entry for an MCP client's config (Claude Code, Cursor, ...)">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>

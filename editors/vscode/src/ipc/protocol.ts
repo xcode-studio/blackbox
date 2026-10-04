@@ -24,6 +24,7 @@ export interface IPCRequest {
     id: string;
     tool: string;
     args: Record<string, unknown>;
+    token?: string; // TCP sockets only, see parseTcpSocket.
 }
 
 export interface IPCResponse {
@@ -119,6 +120,22 @@ export function socketPath(id: string): string {
         return `\\\\.\\pipe\\blackbox-${id}-${crypto.randomBytes(12).toString('hex')}`;
     }
     return path.join(ipcDir(), `${id}.sock`);
+}
+
+// Windows where Node can't reach the editor's Unix socket (JetBrains IDEs on
+// Windows: Java has no named pipes) listen on TCP loopback instead. Their
+// registry entry's socket is "tcp://127.0.0.1:<port>/<token>", and every
+// request carries the token; the registry folder is private, so only this
+// user can read it.
+const TCP_SOCKET = /^tcp:\/\/(127\.0\.0\.1|localhost):(\d+)\/([0-9a-f]+)$/;
+
+export function isTcpSocket(socket: string): boolean {
+    return socket.startsWith('tcp://');
+}
+
+export function parseTcpSocket(socket: string): { host: string; port: number; token: string } | undefined {
+    const match = TCP_SOCKET.exec(socket);
+    return match ? { host: match[1], port: Number(match[2]), token: match[3] } : undefined;
 }
 
 export function registryPath(id: string): string {

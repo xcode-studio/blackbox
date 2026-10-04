@@ -1,0 +1,5 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">
+        <localTerminalCustomizer implementation="dev.blackbox.ipc.TerminalWindowEnv"/>
+    </extensions>
+</idea-plugin>
