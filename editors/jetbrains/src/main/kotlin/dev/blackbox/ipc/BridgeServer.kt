@@ -199,8 +199,10 @@ class BridgeServer(
         writeRegistry()
     }
 
-    private fun fileKey(path: Path): Any? =
-        runCatching { Files.readAttributes(path, BasicFileAttributes::class.java).fileKey() }.getOrNull()
+    // The file's identity (inode); Windows has none, so its creation time.
+    private fun fileKey(path: Path): Any? = runCatching {
+        Files.readAttributes(path, BasicFileAttributes::class.java).let { it.fileKey() ?: it.creationTime() }
+    }.getOrNull()
 
     private fun ownsSocket(): Boolean = useTcp || (socketKey != null && fileKey(Path.of(entry.socket)) == socketKey)
 
