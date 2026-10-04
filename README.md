@@ -57,7 +57,7 @@ This project contains implementations for the following editors:
 |-----|--------|-----------|
 | **VS Code** | Active | [`editors/vscode/`](editors/vscode/) |
 | **JetBrains** | Planned | [`editors/jetbrains/`](editors/jetbrains/) |
-| **Neovim** | Planned | [`editors/neovim/`](editors/neovim/) |
+| **Neovim** | Working, not yet published ([install from this repo](editors/neovim/README.md)) | [`editors/neovim/`](editors/neovim/) |
 
 
 ## 📚 Packages in this Monorepo
@@ -72,7 +72,7 @@ The core debugging engine that powers Blackbox. It provides framework-agnostic M
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome\! Feel free to check the [issues page](https://github.com/akash-aman/blackbox/issues).
+Contributions, issues, and feature requests are welcome\! Feel free to check the [issues page](https://github.com/xcode-studio/blackbox/issues).
 
 ## 📝 License
 

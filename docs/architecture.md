@@ -88,10 +88,14 @@ Layers on the MCP side, each depending only on the ones below:
 
 ---
 
+## Neovim Implementation
+`editors/neovim/` is the same window side in Lua on top of nvim-dap. It writes the same registry entry (`app: "Neovim"`; `pid` and `appPid` are both the Neovim process, so an AI tool in `:terminal` is matched to it), listens on the same kind of socket, and answers the same requests. The MCP server needs no changes. Pause state, output and waits port `debugEvents.ts` onto `dap.listeners`. nvim-dap has no function or disabled breakpoints, so the plugin keeps those itself.
+
 ## Extension Guide: Adding New IDEs
-To integrate a new editor into the Blackbox ecosystem, follow these steps:
+A new editor only needs the **window side**; the MCP server is shared.
 
 1.  **Namespace:** Create a new directory under `editors/<ide>/`.
-2.  **Compliance:** Implement the functions defined in `schema/tools.json` using the target IDE's native APIs.
-3.  **Transport:** Expose the implementation via an MCP-compliant transport (typically stdio or a native IDE plugin API).
-4.  **Automation:** Register a dedicated CI workflow in `.github/workflows/<ide>.yml` to validate implementation against the schema.
+2.  **Window protocol:** Per window, listen on `<ipcDir>/<id>.sock` (a randomly named pipe on Windows) in the private per-user folder (`/tmp/blackbox-<uid>/`, mode 0700, checked for ownership), and write `<ipcDir>/<id>.json` with the `RegistryEntry` fields from `editors/vscode/src/ipc/protocol.ts` (`app`, `appPid`, `protocol: 2`, …). Answer newline-delimited JSON requests `{id, tool, args}` with `{id, result}` or `{id, error}`.
+3.  **Compliance:** Implement every tool in `schema/tools.json` except `ide_*` (answered by the MCP server), plus the internal `window_status`.
+4.  **Conformance:** Add a harness to `editors/conformance/harness/` that starts the editor, and run `editors/conformance/test` against it. It drives the editor through the real MCP server.
+5.  **Automation:** Register a CI workflow in `.github/workflows/<ide>.yml`.

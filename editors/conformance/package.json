@@ -1,0 +1,12 @@
+{
+    "name": "blackbox-conformance",
+    "private": true,
+    "description": "Editor-independent checks that an editor's Blackbox window side implements the tool contract, driven through the real MCP server.",
+    "scripts": {
+        "test:nvim": "mocha --ui tdd --timeout 120000 \"test/**/*.test.js\""
+    },
+    "devDependencies": {
+        "@modelcontextprotocol/sdk": "^1.29.0",
+        "mocha": "^10.0.0"
+    }
+}
