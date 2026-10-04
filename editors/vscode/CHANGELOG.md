@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Blackbox VS Code extension. Each version is also a [GitHub Release](https://github.com/akash-aman/blackbox/releases) (tag `vscode-v<version>`) with these notes and the packaged `.vsix`.
+All notable changes to the Blackbox VS Code extension. Each version is also a [GitHub Release](https://github.com/xcode-studio/blackbox/releases) (tag `vscode-v<version>`) with these notes and the packaged `.vsix`.
 
 Releases are published by pushing a `vscode-v<version>` tag; CI refuses to release a version without an entry here. Changes collect under `## Unreleased`; at release time that heading becomes `## <version> (Pre-release) — <date>` (leave out `(Pre-release)` for a stable release).
 

@@ -24,7 +24,7 @@
 
 > Works in VS Code and VS Code-based editors such as Cursor and Antigravity.
 >
-> What's new in each version: [CHANGELOG](CHANGELOG.md) · [GitHub Releases](https://github.com/akash-aman/blackbox/releases).
+> What's new in each version: [CHANGELOG](CHANGELOG.md) · [GitHub Releases](https://github.com/xcode-studio/blackbox/releases).
 
 Made with ❤️ by [Akash Aman](https://linktr.ee/akash_aman)
 

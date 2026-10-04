@@ -31,7 +31,7 @@ Thank you for your interest in contributing to Blackbox! We welcome contribution
 
 ## Releasing (maintainers)
 
-Each VS Code extension version is a tag `vscode-v<version>`, a [GitHub Release](https://github.com/akash-aman/blackbox/releases) and an entry in [`editors/vscode/CHANGELOG.md`](editors/vscode/CHANGELOG.md).
+Each VS Code extension version is a tag `vscode-v<version>`, a [GitHub Release](https://github.com/xcode-studio/blackbox/releases) and an entry in [`editors/vscode/CHANGELOG.md`](editors/vscode/CHANGELOG.md).
 
 1. Bump `version` in `editors/vscode/package.json` (`npm version <x.y.z> --no-git-tag-version`).
 2. In `editors/vscode/CHANGELOG.md`, rename `## Unreleased` (where changes collect, one bullet per user-visible change) to `## <x.y.z> (Pre-release) — <YYYY-MM-DD>`. Leave out `(Pre-release)` for a stable release. Check it with `node scripts/release-notes.js <x.y.z>`.

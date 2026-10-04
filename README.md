@@ -72,7 +72,7 @@ The core debugging engine that powers Blackbox. It provides framework-agnostic M
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome\! Feel free to check the [issues page](https://github.com/akash-aman/blackbox/issues).
+Contributions, issues, and feature requests are welcome\! Feel free to check the [issues page](https://github.com/xcode-studio/blackbox/issues).
 
 ## 📝 License
 

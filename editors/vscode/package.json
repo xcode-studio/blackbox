@@ -9,7 +9,7 @@
     "pricing": "Free",
     "repository": {
         "type": "git",
-        "url": "https://github.com/akash-aman/blackbox"
+        "url": "https://github.com/xcode-studio/blackbox"
     },
     "engines": {
         "vscode": "^1.99.0"
