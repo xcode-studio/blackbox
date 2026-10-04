@@ -45,13 +45,17 @@ jobs:
         id: meta
         run: |
           version=$(sed -n 's/^pluginVersion=//p' gradle.properties)
-          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "jetbrains-v$version" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match gradle.properties pluginVersion $version (expected jetbrains-v$version)"
-            exit 1
+          prerelease=false
+          # Only a release needs its tag and changelog entry; other runs just test.
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            if [[ "$GITHUB_REF_NAME" != "jetbrains-v$version" ]]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match gradle.properties pluginVersion $version (expected jetbrains-v$version)"
+              exit 1
+            fi
+            export CHANGELOG="$PWD/CHANGELOG.md"
+            node ../vscode/scripts/release-notes.js "$version" > /dev/null
+            prerelease=$(node ../vscode/scripts/release-notes.js "$version" --prerelease)
           fi
-          export CHANGELOG="$PWD/CHANGELOG.md"
-          node ../vscode/scripts/release-notes.js "$version" > /dev/null
-          prerelease=$(node ../vscode/scripts/release-notes.js "$version" --prerelease)
           {
             echo "version=$version"
             echo "prerelease=$prerelease"
