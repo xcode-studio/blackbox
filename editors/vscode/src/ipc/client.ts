@@ -3,7 +3,7 @@
 // (mcp/session.ts).
 
 import * as net from 'net';
-import { IPCRequest, IPCResponse } from './protocol';
+import { IPCRequest, IPCResponse, isTcpSocket, parseTcpSocket } from './protocol';
 
 const RETRY_DELAYS_MS = [250, 500, 750];
 // Only errors where the request never reached VS Code, so a retry cannot
@@ -47,9 +47,14 @@ export async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export const callExtension: Send = (socket, { tool, args, timeoutMs }) => {
-    const req: IPCRequest = { id: String(++requestId), tool, args };
+    const tcp = parseTcpSocket(socket);
+    if (isTcpSocket(socket) && !tcp) {
+        return Promise.reject(new IPCError(`Unsupported window address ${socket.replace(/\/[0-9a-f]+$/, '/…')}; update Blackbox.`));
+    }
+    const req: IPCRequest = { id: String(++requestId), tool, args, ...(tcp && { token: tcp.token }) };
     return new Promise((resolve, reject) => {
-        const client = net.createConnection(socket, () => {
+        const target: net.NetConnectOpts = tcp ? { host: tcp.host, port: tcp.port } : { path: socket };
+        const client = net.createConnection(target, () => {
             client.write(JSON.stringify(req) + '\n');
         });
         const timer = setTimeout(() => {

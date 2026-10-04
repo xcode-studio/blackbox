@@ -51,9 +51,11 @@ export function detectLaunch(windows: readonly RegistryEntry[], ancestors: reado
     if (fromTerminal) {
         return { window: fromTerminal };
     }
-    const fromChatPanel = windows.find(w => ancestors.includes(w.pid));
-    if (fromChatPanel) {
-        return { window: fromChatPanel };
+    // Only a process of its own identifies a window: JetBrains IDEs serve
+    // every project window from one process, so there it names the editor.
+    const fromChatPanel = windows.filter(w => ancestors.includes(w.pid));
+    if (fromChatPanel.length === 1) {
+        return { window: fromChatPanel[0] };
     }
     const editor = windows.find(w => w.appPid > 0 && ancestors.includes(w.appPid));
     return editor ? { appPid: editor.appPid } : {};

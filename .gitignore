@@ -150,6 +150,7 @@ Thumbs.db
 
 # Compiled output (monorepo-wide)
 editors/vscode/out/
+editors/vscode/dist-mcp/
 
 # Vite logs files
 vite.config.js.timestamp-*

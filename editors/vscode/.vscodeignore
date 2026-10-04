@@ -11,4 +11,4 @@ tsconfig.json
 .gitignore
 node_modules/.bin/
 package-lock.json
-ext.sh
+ext.shdist-mcp/

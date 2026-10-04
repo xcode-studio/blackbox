@@ -4,13 +4,13 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { RegistryEntry, UNKNOWN_APP, ipcDir, isPrivateDir } from './protocol';
+import { RegistryEntry, UNKNOWN_APP, ipcDir, isPrivateDir, isTcpSocket } from './protocol';
 
 // A window's socket disappears with it. Checking it too catches entries
-// whose pid was reused by another process. Named pipes (Windows) aren't
-// files, so there only the pid is checked.
+// whose pid was reused by another process. Named pipes (Windows) and TCP
+// sockets aren't files, so there only the pid is checked.
 function socketExists(socket: string): boolean {
-    return process.platform === 'win32' || fs.existsSync(socket);
+    return process.platform === 'win32' || isTcpSocket(socket) || fs.existsSync(socket);
 }
 
 function isAlive(pid: number): boolean {

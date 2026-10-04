@@ -29,6 +29,16 @@ suite('detectLaunch', () => {
         assert.deepStrictEqual(detectLaunch(WINDOWS, [], { BLACKBOX_WINDOW: '999' }), {});
     });
 
+    test('several windows in one process (JetBrains projects): the process names only the editor', () => {
+        const ide = 6000;
+        const projects = [
+            makeEntry('6000-aa', ['/sites/a'], { pid: ide, appPid: ide }),
+            makeEntry('6000-bb', ['/sites/b'], { pid: ide, appPid: ide }),
+        ];
+        assert.deepStrictEqual(detectLaunch(projects, [7001, ide], {}), { appPid: ide });
+        assert.strictEqual(detectLaunch(projects, [7001, ide], { BLACKBOX_WINDOW: '6000-bb' }).window?.id, '6000-bb');
+    });
+
     test('external terminal: no link', () => {
         assert.deepStrictEqual(detectLaunch(WINDOWS, [7001, 43533], {}), {});
     });

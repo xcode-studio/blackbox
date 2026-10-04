@@ -91,11 +91,16 @@ Layers on the MCP side, each depending only on the ones below:
 ## Neovim Implementation
 `editors/neovim/` is the same window side in Lua on top of nvim-dap. It writes the same registry entry (`app: "Neovim"`; `pid` and `appPid` are both the Neovim process, so an AI tool in `:terminal` is matched to it), listens on the same kind of socket, and answers the same requests. The MCP server needs no changes. Pause state, output and waits port `debugEvents.ts` onto `dap.listeners`. nvim-dap has no function or disabled breakpoints, so the plugin keeps those itself.
 
+## JetBrains Implementation
+`editors/jetbrains/` is the window side in Kotlin on the IntelliJ debugger platform (XDebugger), so one plugin works in every IntelliJ-based IDE; language-specific parts (method and exception breakpoints) are optional extensions, e.g. for Java. An IDE serves all its projects from one process, so **each open project is a window**: id `<pid>-<hash of the project folder>`, `pid` and `appPid` both the IDE's. The MCP server then treats the IDE process as the *editor* an AI tool was started from, not a window; the IDE's terminal sets `BLACKBOX_WINDOW` to pick the project. Run configurations are started by name in the debugger. Hit conditions and logpoints, which the platform doesn't have for every language, are applied by the plugin when such a breakpoint pauses. The plugin also ships a bundled MCP server (`editors/vscode/scripts/bundle-mcp.js`) and installs the launcher with the same rules as the VS Code extension.
+
+On Windows, Node can't connect to Java's Unix domain sockets (it only knows named pipes there), so the plugin listens on TCP loopback: the registry entry's socket is `tcp://127.0.0.1:<port>/<token>`, and every request carries the token. The registry folder is private, so only this user can read it.
+
 ## Extension Guide: Adding New IDEs
 A new editor only needs the **window side**; the MCP server is shared.
 
 1.  **Namespace:** Create a new directory under `editors/<ide>/`.
-2.  **Window protocol:** Per window, listen on `<ipcDir>/<id>.sock` (a randomly named pipe on Windows) in the private per-user folder (`/tmp/blackbox-<uid>/`, mode 0700, checked for ownership), and write `<ipcDir>/<id>.json` with the `RegistryEntry` fields from `editors/vscode/src/ipc/protocol.ts` (`app`, `appPid`, `protocol: 2`, …). Answer newline-delimited JSON requests `{id, tool, args}` with `{id, result}` or `{id, error}`.
+2.  **Window protocol:** Per window, listen on `<ipcDir>/<id>.sock` (a randomly named pipe on Windows, or `tcp://127.0.0.1:<port>/<token>` where named pipes aren't available) in the private per-user folder (`/tmp/blackbox-<uid>/`, mode 0700, checked for ownership), and write `<ipcDir>/<id>.json` with the `RegistryEntry` fields from `editors/vscode/src/ipc/protocol.ts` (`app`, `appPid`, `protocol: 2`, …). Answer newline-delimited JSON requests `{id, tool, args}` with `{id, result}` or `{id, error}`.
 3.  **Compliance:** Implement every tool in `schema/tools.json` except `ide_*` (answered by the MCP server), plus the internal `window_status`.
 4.  **Conformance:** Add a harness to `editors/conformance/harness/` that starts the editor, and run `editors/conformance/test` against it. It drives the editor through the real MCP server.
 5.  **Automation:** Register a CI workflow in `.github/workflows/<ide>.yml`.

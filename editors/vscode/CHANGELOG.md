@@ -4,6 +4,11 @@ All notable changes to the Blackbox VS Code extension. Each version is also a [G
 
 Releases are published by pushing a `vscode-v<version>` tag; CI refuses to release a version without an entry here. Changes collect under `## Unreleased`; at release time that heading becomes `## <version> (Pre-release) — <date>` (leave out `(Pre-release)` for a stable release).
 
+## Unreleased
+
+- **JetBrains IDEs:** the MCP server reaches windows that listen on TCP loopback with a token (`tcp://127.0.0.1:<port>/<token>`), as the JetBrains plugin does on Windows.
+- An AI tool started from an editor that serves several windows from one process (a JetBrains IDE) is matched to that editor, not to an arbitrary one of its windows.
+
 ## 0.5.1 — 2026-09-30
 
 - **Launcher can't be downgraded:** `~/.blackbox/blackbox-mcp.js` now records which version wrote it. An editor with an older Blackbox leaves a newer launcher alone; a rollback replaces it once the newer install is gone.

@@ -9,6 +9,7 @@ const os = require('os');
 const path = require('path');
 
 const PLUGIN = path.resolve(__dirname, '../../neovim');
+const GO_FIXTURE = fs.realpathSync(path.resolve(__dirname, '../fixtures/go'));
 const NVIM_DAP = process.env.NVIM_DAP_PATH || path.join(os.homedir(), '.local/share/nvim/lazy/nvim-dap');
 
 function initScript(workspace) {
@@ -30,7 +31,7 @@ require('blackbox').setup()
 `;
 }
 
-async function startNvim({ ipcDir, workspace }) {
+async function startNvim({ ipcDir, workspace = GO_FIXTURE }) {
     const init = path.join(ipcDir, 'init.lua');
     fs.writeFileSync(init, initScript(workspace));
     const nvim = spawn('nvim', ['--headless', '-u', init], {
@@ -52,6 +53,10 @@ async function startNvim({ ipcDir, workspace }) {
     }
     return {
         name: 'Neovim',
+        workspace,
+        file: path.join(workspace, 'app.go'),
+        functionName: 'main.add',
+        skip: [],
         // Resolves at once if Neovim already exited (e.g. crashed during a test).
         stop: () => new Promise(resolve => {
             if (nvim.exitCode !== null || nvim.signalCode !== null) { return resolve(); }

@@ -1,7 +1,7 @@
 // Conformance: the AI debugging loop against an editor's window side, through
-// the real Blackbox MCP server, on the Go fixture (delve). Mirrors
-// editors/vscode/src/test/suite/loop.test.ts.
+// the real Blackbox MCP server. Mirrors editors/vscode/src/test/suite/loop.test.ts.
 //
+//   BLACKBOX_EDITOR  nvim (Go fixture, delve; default) or jetbrains (Java fixture, IntelliJ IDEA)
 //   BLACKBOX_SERVER  MCP server to use (default: the VS Code build's out/mcp/server.js)
 
 const assert = require('assert');
@@ -10,18 +10,26 @@ const os = require('os');
 const path = require('path');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
-const { startNvim } = require('../harness/nvim');
 
-const WORKSPACE = fs.realpathSync(path.resolve(__dirname, '../fixtures/go'));
-const FIXTURE = path.join(WORKSPACE, 'app.go');
+const HARNESSES = {
+    nvim: { start: () => require('../harness/nvim').startNvim, setupMs: 30_000 },
+    jetbrains: { start: () => require('../harness/jetbrains').startJetBrains, setupMs: 11 * 60_000 },
+};
+const EDITOR = process.env.BLACKBOX_EDITOR || 'nvim';
+const HARNESS = HARNESSES[EDITOR];
+if (!HARNESS) { throw new Error(`unknown BLACKBOX_EDITOR "${EDITOR}"; one of ${Object.keys(HARNESSES).join(', ')}`); }
+
+// Both fixtures have the same lines.
 const BREAKPOINT_LINE = 14;
 const LOGPOINT_LINE = 15;
 const SERVER = process.env.BLACKBOX_SERVER || path.resolve(__dirname, '../../vscode/out/mcp/server.js');
 
-suite('Debug loop (Go fixture, Neovim)', () => {
+suite(`Debug loop (${EDITOR})`, () => {
     let ipcDir;
     let editor;
     let client;
+    let WORKSPACE;
+    let FIXTURE;
 
     async function call(tool, args = {}) {
         const result = await client.callTool({ name: tool, arguments: args });
@@ -32,10 +40,12 @@ suite('Debug loop (Go fixture, Neovim)', () => {
     const callJson = async (tool, args) => JSON.parse(await call(tool, args));
 
     suiteSetup(async function () {
-        this.timeout(30_000);
+        this.timeout(HARNESS.setupMs);
         ipcDir = fs.realpathSync(fs.mkdtempSync(path.join(process.platform === 'win32' ? os.tmpdir() : '/tmp', 'bbx-conf-')));
         fs.chmodSync(ipcDir, 0o700);
-        editor = await startNvim({ ipcDir, workspace: WORKSPACE });
+        editor = await HARNESS.start()({ ipcDir });
+        WORKSPACE = editor.workspace;
+        FIXTURE = editor.file;
         client = new Client({ name: 'conformance', version: '0' });
         await client.connect(new StdioClientTransport({
             command: process.execPath,
@@ -64,6 +74,23 @@ suite('Debug loop (Go fixture, Neovim)', () => {
         assert.deepStrictEqual(window.folders, [WORKSPACE]);
     });
 
+    test('the MCP launcher the editor installed serves its windows', async function () {
+        if (!editor.home) { this.skip(); } // Editors that rely on the VS Code extension's.
+        const launcher = new Client({ name: 'conformance-launcher', version: '0' });
+        await launcher.connect(new StdioClientTransport({
+            command: process.execPath,
+            args: [path.join(editor.home, 'blackbox-mcp.js')],
+            cwd: WORKSPACE,
+            env: { ...process.env, BLACKBOX_IPC_DIR: ipcDir, BLACKBOX_HOME: editor.home },
+        }));
+        try {
+            const result = await launcher.callTool({ name: 'ide_list_windows', arguments: {} });
+            assert.strictEqual(JSON.parse(result.content[0].text)[0].app.name, editor.name);
+        } finally {
+            await launcher.close();
+        }
+    });
+
     test('start by name, wait, step, read logpoints, stop', async () => {
         await call('debug_set_breakpoint', { breakpoints: [
             { file: FIXTURE, line: BREAKPOINT_LINE },
@@ -74,7 +101,7 @@ suite('Debug loop (Go fixture, Neovim)', () => {
         const hit = await callJson('debug_wait_for_stop', { timeoutMs: 60_000 });
         assert.strictEqual(hit.state, 'stopped', JSON.stringify(hit));
         assert.strictEqual(hit.line, BREAKPOINT_LINE, JSON.stringify(hit));
-        assert.ok(hit.file.endsWith('app.go'));
+        assert.ok(hit.file.endsWith(path.basename(FIXTURE)), hit.file);
 
         const stepped = await callJson('debug_step_over');
         assert.strictEqual(stepped.state, 'stopped', JSON.stringify(stepped));
@@ -125,9 +152,11 @@ suite('Debug loop (Go fixture, Neovim)', () => {
         assert.match(await call('debug_toggle_breakpoints', { enabled: true, breakpoints: [{ file: FIXTURE, line: BREAKPOINT_LINE }] }), /Enabled 1/);
         assert.strictEqual((await callJson('debug_list_breakpoints'))[0].hitCondition, '2', 'toggling keeps the hit condition');
 
-        assert.match(await call('debug_set_function_breakpoint', { name: 'main.add' }), /ok: function main.add/);
-        assert.ok((await callJson('debug_list_breakpoints')).some(b => b.type === 'function' && b.name === 'main.add'));
-        assert.match(await call('debug_remove_breakpoint', { functions: ['main.add'] }), /removed function main.add/);
+        const fn = editor.functionName;
+        assert.match(await call('debug_set_function_breakpoint', { name: fn }), new RegExp(`ok: function ${fn}`));
+        const withFunction = await callJson('debug_list_breakpoints');
+        assert.ok(withFunction.some(b => b.type === 'function' && b.name.endsWith(fn)), JSON.stringify(withFunction));
+        assert.match(await call('debug_remove_breakpoint', { functions: [fn] }), new RegExp(`removed function ${fn}`));
 
         const reached = await callJson('debug_run_to_line', { file: FIXTURE, line: LOGPOINT_LINE, timeoutMs: 20_000 });
         assert.strictEqual(reached.reachedTarget, true, JSON.stringify(reached));
@@ -159,7 +188,8 @@ suite('Debug loop (Go fixture, Neovim)', () => {
         assert.strictEqual(after.state, 'terminated', JSON.stringify(after));
     });
 
-    test('a start that never comes up fails with an explanation instead of hanging', async () => {
+    test('a start that never comes up fails with an explanation instead of hanging', async function () {
+        if (editor.skip.includes('stalled start')) { this.skip(); }
         const started = Date.now();
         await assert.rejects(call('debug_start', { configName: 'Fixture (stalled)' }), /has not started after 20s/);
         assert.ok(Date.now() - started < 30_000, 'answers within the stall limit');

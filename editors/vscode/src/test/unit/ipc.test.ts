@@ -3,6 +3,7 @@
 
 import * as assert from 'assert';
 import * as fs from 'fs';
+import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
 import { ChildProcess, spawn } from 'child_process';
@@ -122,6 +123,33 @@ suite('IPC bridge', () => {
         );
         await sleep(400); // Let the handler finish and try to write.
         assert.strictEqual(await who(wsA), 'A');
+    });
+
+    test('reaches a TCP window (JetBrains on Windows) with its token', async () => {
+        const seen: unknown[] = [];
+        const server = net.createServer(socket => {
+            socket.on('data', chunk => {
+                const req = JSON.parse(chunk.toString().trim());
+                seen.push(req.token);
+                socket.end(JSON.stringify({ id: req.id, result: `hello ${req.tool}` }) + '\n');
+            });
+        });
+        await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
+        try {
+            const port = (server.address() as net.AddressInfo).port;
+            const resp = await callExtension(`tcp://127.0.0.1:${port}/abc123`, { tool: 'whoami', args: {}, timeoutMs: 2000 });
+            assert.strictEqual(resp.result, 'hello whoami');
+            assert.deepStrictEqual(seen, ['abc123']);
+            await assert.rejects(callExtension('tcp://example.com:80/abc', { tool: 'whoami', args: {}, timeoutMs: 2000 }), /Unsupported window address/);
+        } finally {
+            server.close();
+        }
+    });
+
+    test('keeps TCP windows in the registry: their socket is not a file', async () => {
+        const tcp = makeEntry('T', [wsA], { pid: windowOwner.pid, socket: 'tcp://127.0.0.1:1/ab' });
+        fs.writeFileSync(path.join(ipcDir, 'T.json'), JSON.stringify(tcp));
+        assert.ok(listWindows().some(w => w.id === 'T'));
     });
 
     test('returns handler errors as errors', async () => {
